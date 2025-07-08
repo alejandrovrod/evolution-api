@@ -20,7 +20,7 @@ docker-compose.yaml
 
 # Package
 /yarn.lock
-/package-lock.json
+# /package-lock.json
 
 # IDEs
 .vscode/*
