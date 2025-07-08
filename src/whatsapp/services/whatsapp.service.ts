@@ -32,6 +32,7 @@ import makeWASocket, {
   WAMessage,
   WAMessageUpdate,
   WASocket,
+  WAPrivacyGroupAddValue,
 } from '@whiskeysockets/baileys';
 import axios from 'axios';
 import { exec, execSync } from 'child_process';
@@ -242,8 +243,8 @@ export class WAStartupService {
     this.logger.verbose('Getting profile status');
     const status = await this.client.fetchStatus(this.instance.wuid);
 
-    this.logger.verbose(`Profile status: ${status.status}`);
-    return status.status;
+    this.logger.verbose(`Profile status: ${status[0]?.status}`);
+    return status[0]?.status;
   }
 
   public get profilePictureUrl() {
@@ -1459,7 +1460,7 @@ export class WAStartupService {
         messageType: getContentType(received.message),
         messageTimestamp: received.messageTimestamp as number,
         owner: this.instance.name,
-        source: getDevice(received.key.id),
+        source: (['android', 'web', 'ios', 'unknown', 'desktop'].includes(getDevice(received.key.id)) ? getDevice(received.key.id) : 'unknown'),
       };
 
       if (this.localSettings.read_messages && received.key.id !== 'status@broadcast') {
@@ -1709,7 +1710,12 @@ export class WAStartupService {
         if (events['messaging-history.set']) {
           this.logger.verbose('Listening event: messaging-history.set');
           const payload = events['messaging-history.set'];
-          this.messageHandle['messaging-history.set'](payload, database);
+          this.messageHandle['messaging-history.set']({
+            chats: payload.chats,
+            contacts: payload.contacts,
+            messages: payload.messages,
+            isLatest: payload.isLatest ?? false,
+          }, database);
         }
 
         if (events['messages.upsert']) {
@@ -1888,7 +1894,7 @@ export class WAStartupService {
       this.logger.verbose('Getting status');
       return {
         wuid: jid,
-        status: (await this.client.fetchStatus(jid))?.status,
+        status: (await this.client.fetchStatus(jid))[0]?.status,
       };
     } catch (error) {
       this.logger.verbose('Status not found');
@@ -1972,8 +1978,9 @@ export class WAStartupService {
         await this.client.presenceSubscribe(sender);
         this.logger.verbose('Subscribing to presence');
 
-        await this.client.sendPresenceUpdate(options?.presence ?? 'composing', sender);
-        this.logger.verbose('Sending presence update: ' + options?.presence ?? 'composing');
+        const presence = options?.presence || 'composing';
+        await this.client.sendPresenceUpdate(presence, sender);
+        this.logger.verbose('Sending presence update: ' + presence);
 
         await delay(options.delay);
         this.logger.verbose('Set delay: ' + options.delay);
@@ -2704,7 +2711,7 @@ export class WAStartupService {
         if (!result) {
           onWhatsapp.push(new OnWhatsAppDto(jid, false));
         } else {
-          onWhatsapp.push(new OnWhatsAppDto(result.jid, result.exists));
+          onWhatsapp.push(new OnWhatsAppDto(result.jid, Boolean(result.exists)));
         }
       }
     }
@@ -2979,7 +2986,7 @@ export class WAStartupService {
       await this.client.updateLastSeenPrivacy(settings.privacySettings.last);
       this.logger.verbose('Last seen privacy updated');
 
-      await this.client.updateGroupsAddPrivacy(settings.privacySettings.groupadd);
+      await this.client.updateGroupsAddPrivacy(settings.privacySettings.groupadd as WAPrivacyGroupAddValue);
       this.logger.verbose('Groups add privacy updated');
 
       this.client?.ws?.close();
