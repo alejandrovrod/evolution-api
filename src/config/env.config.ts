@@ -166,6 +166,10 @@ export class ConfigService {
       this.env.SERVER.TYPE = 'http';
       this.env.SERVER.PORT = 8080;
     }
+    // Prioriza process.env.PORT si existe (por ejemplo, en Render)
+    if (process.env.PORT) {
+      this.env.SERVER.PORT = parseInt(process.env.PORT, 10);
+    }
   }
 
   private envYaml(): Env {
