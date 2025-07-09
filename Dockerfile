@@ -1,4 +1,4 @@
-FROM node:16.18-alpine
+FROM node:20-alpine
 
 LABEL version="1.5.2" description="Api to control whatsapp features through http requests." 
 LABEL maintainer="Davidson Gomes" git="https://github.com/DavidsonGomes"
@@ -114,7 +114,7 @@ ENV AUTHENTICATION_INSTANCE_CHATWOOT_ACCOUNT_ID=1
 ENV AUTHENTICATION_INSTANCE_CHATWOOT_TOKEN=123456
 ENV AUTHENTICATION_INSTANCE_CHATWOOT_URL=<url>
 
-RUN npm install --force
+RUN npm install --legacy-peer-deps
 
 COPY . .
 
